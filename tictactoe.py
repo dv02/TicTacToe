@@ -156,6 +156,7 @@ class FieldAnimation():
         '''
         assert(0<= row and row <= 2, "row must be between 0 and 2")
         assert(0<= col and col <= 2, "col must be between 0 and 2")
+        assert(maxTicks >= 0, "maxTicks must be a positive value!")
         self.maxTicks = maxTicks
         self.fieldRow = row
         self.fieldCol = col
@@ -193,6 +194,7 @@ class Delay():
         ' :param: action - The action which will be called each tick
         ' :param: arg - The Argument the method will be called with
         '''
+        assert(delay >= 0, "the delay must be a positive value!")
         self.delay = delay
         self.arg = arg
         self.action = action
@@ -238,7 +240,7 @@ def isEmptyBoard(board):
     '''
     for row in board:
         for entry in row:
-            if not entry == 0:
+            if not entry == 0:      # break as soon as there is an empty field
                 return False
     return True
 
@@ -344,16 +346,17 @@ def testFunction():
     
     
     
-    # Teste KI (nextMove)
+    # Teste KI (nextMoveMiniMax and nextMoveMonteCarlo)
     for i in range(7): print
     print "TESTE KUENSTLICHE INTELLIGENZ\n"
     
     testBoard = [[ 1, 1,-1],
                  [-1, 1, 1],
                  [ 1,-1,-1]]
-    print "teste nextMove mit Player = 1, board:"
+    print "teste nextMoveMiniMax und nextMoveMonteCarlo mit Player = 1, board:"
     printBoard(testBoard)
-    print "Ergebnis nextMove: " + str(nextMove(testBoard, 1))
+    print "Ergebnis nextMoveMiniMax: " + str(nextMoveMiniMax(testBoard, 1))
+    print "Ergebnis nextMoveMonteCarlo: " + str(nextMoveMonteCarlo(testBoard, 1, 800))
     print
     
     
@@ -361,9 +364,10 @@ def testFunction():
     testBoard = [[ 1, 1, 0],
                  [-1, 1, 1],
                  [ 1,-1,-1]]
-    print "teste nextMove mit Player = 1, board:"
+    print "teste nextMoveMiniMax und nextMoveMonteCarlo mit Player = 1, board:"
     printBoard(testBoard)
-    print "Ergebnis nextMove: " + str(nextMove(testBoard, 1))
+    print "Ergebnis nextMoveMiniMax: " + str(nextMoveMiniMax(testBoard, 1))
+    print "Ergebnis nextMoveMonteCarlo: " + str(nextMoveMonteCarlo(testBoard, 1, 800))
     print
     
     
@@ -371,9 +375,10 @@ def testFunction():
     testBoard = [[ -1, -1, 0],
                  [ 0, 0, 0],
                  [ 1, 1, 0]]
-    print "teste nextMove mit Player = -1, board:"
+    print "teste nextMoveMiniMax und nextMoveMonteCarlo mit Player = -1, board:"
     printBoard(testBoard)
-    print "Ergebnis nextMove: " + str(nextMove(testBoard, -1))
+    print "Ergebnis nextMoveMiniMax: " + str(nextMoveMiniMax(testBoard, -1))
+    print "Ergebnis nextMoveMonteCarlo: " + str(nextMoveMonteCarlo(testBoard, -1, 800))
     print
     
     for i in range(7): print
@@ -412,12 +417,16 @@ def printBoard( board ):
     
 def convertMove( string ):
     '''
-    ' ...
-    ' :param: String, entaelt Koordinaten im Format
-    '         '00', also zwei Zahlen. Die erste steht
-    '         fuer die Reihe, das zweite ist die Zeile.
-    ' :return: Tupel (row, col) mit 0 <= row,col <= 2
-    '          Bei falscher Eingabe returns (-1,-1).
+    Convert the string to a list containing two ints:
+    The row and the column the string stands for.
+    
+    Arguments:
+        string {string} -- enthaelt Koordinaten im Format
+              '00', also zwei Zahlen. Die erste steht
+              fuer die Reihe, das zweite ist die Zeile.
+    
+    Returns:
+        list -- A list containg 2 ints which stand for the row and the column
     '''
     if not len(string) == 2:
         return (-1, -1)
@@ -426,6 +435,7 @@ def convertMove( string ):
         return (int(string[0]), int(string[1]))
     except ValueError:
         return (-1, -1)
+    return (-1, -1)
 
 ####################################################
 # Spiellogik
@@ -627,54 +637,76 @@ def drawO( canvas, row, col ):
     y = (row * fieldSize + fieldSize / 2) + OFFSETY
     canvas.draw_circle((x, y), radiuses[row][col], 5, radiusColors[row][col], colors[row][col])
     
+def drawBackground(canvas):
+    '''[summary]
+    
+    Draw the rainbow background on the given canvas
+    
+    Arguments:
+        canvas {canvas} -- The canvas to draw on
+    '''
+    t = TICKS % 360
+    # convert the ticks to a number
+    # from 0 to 359 that we can use for the css "hsl" function.
+
+    # use the css function with 100% saturation and 80% light
+    hsl = "hsl("+str(t)+", 100%, 80%)"
+
+    # draw a huge rectangle the fill the whole screen
+    canvas.draw_polygon(
+        [(0,0),(0,WINDOWX),(WINDOWX,WINDOWY),(0,WINDOWY)],
+        10000,
+        hsl)
+    TICKS+= 2
+
 def draw( canvas ):
     '''
     ' Zeichnet Feld und Spielzuege und alle Anzeigen
     ' :param: canvas
     '''
     
-    global board, spielerAnzeige, WINDOWY, AI_MODE
-    global FIRSTCOLOR, SECONDCOLOR, wins, played, draws
-    global TICKS, background
-    
+
+    # draw the rainbow background if the global flag is set
     if background:
-        t = TICKS % 360
-        hsl = "hsl("+str(t)+",100%, 80%)"
-        canvas.draw_polygon(
-            [(0,0),(0,WINDOWX),(WINDOWX,WINDOWY),(0,WINDOWY)],
-            10000,
-            hsl)
-        TICKS+= 2
+        drawBackground(canvas)
     
     # zeichne Spielfeld
     drawField( canvas )
+
     color = ''
     if player == 1:
         color = FIRSTCOLOR
     elif player == -1:
         color = SECONDCOLOR
+
+
+    # draw all the statistics for player 1
     playerOneWins = str(wins[0])
     playerOneLost = str(wins[1])
     drawsString = str(draws)
     if played > 0:
-        playerOneWins += " (" + str(int(float(wins[0]) / float(played) * float(100))) + " Prozent)"
-        playerOneLost += " (" + str(int(float(wins[1]) / float(played) * float(100))) + " Prozent)"
-        drawsString += " (" + str(int(float(draws) / float(played) * float(100))) + " Prozent)"
+        playerOneWins += " (" + str(int(float(wins[0]) / float(played) * 100.0)) + " Prozent)"
+        playerOneLost += " (" + str(int(float(wins[1]) / float(played) * 100.0)) + " Prozent)"
+        drawsString += " (" + str(int(float(draws) / float(played) * 100.0)) + " Prozent)"
     canvas.draw_text(spielerAnzeige, (200, 50), 48, color, 'sans-serif')
     canvas.draw_text(bigMessage, (250, WINDOWY - 50), 48, "green", 'sans-serif')
     canvas.draw_text("Spieler 1 Stats", (20, 70), 30, FIRSTCOLOR, 'sans-serif')
     canvas.draw_text("Wins: " + playerOneWins, (20, 90), 20, FIRSTCOLOR, 'sans-serif')
     canvas.draw_text("Draws: " + drawsString, (20, 110), 20, FIRSTCOLOR, 'sans-serif')
     canvas.draw_text("Lost: " + playerOneLost, (20, 130), 20, FIRSTCOLOR, 'sans-serif')
+
+
+
+    # draw all the statistics for player 2
     secondStats = "Spieler 2 Stats"
     if not AI_MODE is 0: secondStats = "Computer Stats"
     canvas.draw_text(secondStats, (20, WINDOWY-120), 30, SECONDCOLOR, 'sans-serif')
-    canvas.draw_text("Wins: " + playerOneLost, (20,  WINDOWY-100), 20, SECONDCOLOR, 'sans-serif')
-    canvas.draw_text("Draws: " + drawsString, (20,  WINDOWY-80), 20, SECONDCOLOR, 'sans-serif')
-    canvas.draw_text("Lost: " + playerOneWins, (20,  WINDOWY-60), 20, SECONDCOLOR, 'sans-serif')
-    # Hier muessen jetzt die Spielzuege gezeichnet
-    # werden. Schaue dir dazu die Funktion 
-    # printBoard() an!
+    canvas.draw_text( "Wins: " + playerOneLost, ( 20,  WINDOWY - 100 ), 20, SECONDCOLOR, 'sans-serif' )
+    canvas.draw_text( "Draws: " + drawsString, ( 20,  WINDOWY - 80 ), 20, SECONDCOLOR, 'sans-serif' )
+    canvas.draw_text( "Lost: " + playerOneWins, ( 20,  WINDOWY - 60 ), 20, SECONDCOLOR, 'sans-serif' )
+   
+
+    # draw all circles inside of the fields   
     for row in range(len(board)):
         for col in range(len(board[row])):
             if board[row][col] == -1:
@@ -683,101 +715,229 @@ def draw( canvas ):
                 drawO(canvas, row, col)
     
 def makeMoreBlue(row, col, ticks):
+    '''Animation tick function which will make the specific field a bit more blue, depending on the ticks
+        
+    Arguments:  
+        row {[int]} -- [The row of the field]
+        col {[int]} -- [The col of the field]
+        ticks {[int]} -- [The ticks passed since the timer was started]
+    '''
     global colors
     redOrGreen = 255 - (ticks * 5) - 5
     color = "rgb(" + str(redOrGreen) + "," + str(redOrGreen) + ",255)"
     colors[row][col] = color
 
 def makeMoreRed(row, col, ticks):
+    '''Animation tick function which will make the specific field a bit more red, depending on the ticks
+        
+    Arguments:  
+        row {[int]} -- [The row of the field]
+        col {[int]} -- [The col of the field]
+        ticks {[int]} -- [The ticks passed since the timer was started]
+    '''
     global colors
     blueOrGreen = 255 - (ticks * 5) - 5
     color = "rgb(255," + str(blueOrGreen) + "," + str(blueOrGreen) + ")"
     colors[row][col] = color
 
 def makeBigger(row, col, ticks):
+    '''Animation tick function which will make the specific field a bit bugger, depending on the ticks
+        
+    Arguments:  
+        row {[int]} -- [The row of the field]
+        col {[int]} -- [The col of the field]
+        ticks {[int]} -- [The ticks passed since the timer was started]
+    '''
     global radiuses, GAMESIZE
     fieldSize = GAMESIZE / 3
     maxSize = fieldSize / 2 - 10
     radiuses[row][col] = (maxSize / 50 * ticks ) + 5
     
 def blink(val, color):
+    '''
+    This function will set a field's color either to its original color or
+    to "Yellow", depending on the ticks passed since the timer was started.
+    
+    Arguments: 
+        color {String} -- The original color of the field
+        val {int} -- The value of the field (whether it's occupied by player 1 or -1)
+    '''
     global blinked, blinkTimer, board, colors
     blinked += 1
     for row in range(len(board)):
         for col in range(len(board[row])):
             if board[row][col] == val:
-                if blinked % 2 == 0:
+                if blinked % 2 == 0:    # change the color every second time
                     colors[row][col] = color
                 else:
                     colors[row][col] = 'Yellow'
                 if blinked == 8:
                     colors[row][col] = color
-                    blinkTimer.stop()    
+                    blinkTimer.stop()
+                    return
     
 def blinkBlue():
+    '''
+    Shortcut function calling #blink(val,color) with "Blue" as the color
+    '''
     blink(-1, "Blue")
 
 def blinkRed():
+    '''
+    Shortcut function calling #blink(val,color) with "Red" as the color
+    '''
     blink(1, "Red")
     
 def fadeOutField(row, col, ticks):
+    '''
+    Changes the color and radius color of the field at
+    the given row / col to a rgb value (0 - 255).
+    This value depends on how many ticks have passed since
+    the timer was started. The color will always be a grayish one,
+    so all the r,g and b values are equal.
+    
+    Arguments:
+        row {int} -- The row of the field
+        col {int} -- The column of the field
+        ticks {int} -- The ticks which have passed since the timer was started
+    '''
     global colors, radiusColors
-    c = str(int(float(255) * float(ticks) / float(50)))
-    radiusColors[row][col] = "rgb(" + c + "," + c + "," + c + ")"
-    color = "rgb(" + c + "," + c + "," + c + ")"
+
+    # 255 should be the maximum value, 50.0 is used because
+    # it should update every 50 milliseconds
+    c = str(  int(  255.0 * float(ticks) / 50.0  )  )
+
+    color = "rgb("+c+","+c+","+c+")"
     colors[row][col] = color
+    radiusColors[row][col] = color
     
 ####################################################
 # Augmented Intelligence
 ####################################################
 def get_empty_fields(board):
-    fields = []
-    for row in range(3):
+    '''
+    Loops through the board and returns a list of lists, saying which fields in the board are empty.
+    
+    Arguments:
+        board {list} -- The board (2 dimensional array)
+    
+    Returns:
+        list -- A list of lists which consist of 2 ints, determining the position of the empty field. Example: [ (0,0), (1,2), (2,1) ]
+    '''
+    fields = []   # instantiate the list
+    for row in range(3):        # loop through all elements of the board
         for col in range(3):
-            if board[row][col] == 0:
+            if board[row][col] == 0:    # check if the element is empty, then append it to the list
                 fields.append((row,col))
     return fields
 
 def random_move(board, player):
+    '''[summary]
+    
+    Fills up the board with random moves as long as there
+    is no winner. Useful for the MonteCarlo AI.
+    
+    Arguments:
+        board {list} -- The board (2d list)
+        player {int} -- An int determining the player (-1 or 1)
+    
+    Returns:
+        number -- The winner of the created situation
+    '''
     result = 0
     while result == 0:
         emptyFields = get_empty_fields(board)
-        if emptyFields == []:
+        if emptyFields == []:   # if there is no empty field, it's a draw, so we return 0 here.
             return 0
 
-        move = random.choice(emptyFields)
+        move = random.choice(emptyFields)      # make a move at one random of these fields.
         board[move[0]][move[1]] = player
-        player*=-1
+        player*=-1      # change the player, so that is opponent will make a random move in the next loop
 
         result = getWinner(board)
     return result
 
 def simulate_moves(board, player, repetitions = 100):
-    counter = [0, 0, 0]
+    '''
+    Make x repetitions (x = repetitions), make a random move at each of
+    them and store whether the player has lost, won, or if it's a draw.
+    
+    Arguments:
+        board {list} -- The board (2d list)
+        player {int} -- The player (-1 or 1)
+    
+    Keyword Arguments:
+        repetitions {number} -- The number of repetitions (default: {100})
+    
+    Returns:
+        list -- A list containg 3 ints (lost, draw, won)
+    '''
+    counter = [0, 0, 0]     # instantiate the counting list
     while repetitions > 0:
-        newBoard = copy_board(board)
-        result = random_move(newBoard, player)
+        newBoard = copy_board(board)        # I dont really want to modify the real board (this method will be "call-by-reference")
+        result = random_move(newBoard, player)         # evaluate the random move and store its result
         counter[ result + 1 ] += 1
+        # a bit hacky: count up the element in the list which is at the
+        # "result+1"-th position (if the result is -1 its 0,
+        # if it's 0 the position is 1, if the result is 1 the position will be 0)
+        
         repetitions -= 1
     return counter
 
 def evaluate_moves(board, player, repetitions = 100):
-    freeFields = get_empty_fields(board)
+    '''
+    Get the results of all the different random moves
+    
+    Arguments:
+        board {list} -- The board (2d list)
+        player {int} -- The player (-1 or 1)
+    
+    Keyword Arguments:
+        repetitions {number} -- How often the random function should be called (higher repetitions => better move) (default: {100})
+    
+    Returns:
+        list -- List of lists containg 3 ints (lost, draws, wins) which are the results of #simulate_moves(board, player, repetitions)
+    '''
+    freeFields = get_empty_fields(board)    # get all the empty fields
     results = []
+
     for field in freeFields:
-        board[field[0]][field[1]] = player
+        board[field[0]][field[1]] = player      # set the field to the player's value
         result = simulate_moves(board, player, repetitions)
+        # go through all the possible combinations of this field and get their results
+
         results.append(result)
-        board[field[0]][field[1]] = 0
+        board[field[0]][field[1]] = 0       # "undo" the move, so that the board remains the same.
+
     return results
 
 def nextMoveMonteCarlo(board, player, repetitions = 100):
+    '''
+    Get the best move for a given player in a given
+    situation using the Monte Carlo algorithm
+    
+    Arguments:
+        board {list} -- The board (2d list)
+        player {int} -- The player (-1 or 1)
+    
+    Keyword Arguments:
+        repetitions {number} -- The number of repetitions. The higher it is, the better the resulting move will be (default: {100})
+    
+    Returns:
+        list -- A list containg 2 ints which stand for the row and the column of the calculated best move
+    '''
     freeFields = get_empty_fields(board)
-    values = evaluate_moves(board, player, repetitions)
+
+    values = evaluate_moves(board, player, repetitions)     # get all of the results
     for idx in range(len(values)):
+
+        # Loop through them and multiply the "wins" value by
+        # the current player so that it doesn't really
+        # matter which player's turn it is anymore
         values[idx] = values[idx][2] * player
+
     maxValue = max(values)
-    maxIndex = values.index(maxValue)
+    maxIndex = values.index(maxValue)   # get the field which is the most likely to win
     return freeFields[maxIndex]
 
 def count(board, obj):
@@ -1024,10 +1184,11 @@ def mouseHandler( pos ):
     if not running:
         return
     
-    #cancel if it's the computer's move
+    # cancel if it's the computer's move
     if not AI_MODE is 0 and player == -1:
         return
     
+    # subtract the offests so that we end up with x and y between 0 and WINDOWX / WINDOWY
     x = pos[0] - OFFSETX
     y = pos[1] - OFFSETY
     
@@ -1035,23 +1196,46 @@ def mouseHandler( pos ):
     if x < 0 or y < 0 or x > GAMESIZE or y > GAMESIZE:
         return
     fieldSize = GAMESIZE / 3
-    row = int(y/fieldSize)%3
-    col = int(x/fieldSize)%3
+    row = int( y / fieldSize ) % 3  # break it down into a number from 0 to 2
+    col = int( x / fieldSize ) % 3
+
+    # perform the move calling #getMove(inString) with
+    # the string value of the field's position
     getMove(str(row) + str(col))
     
 def setComputer(mode):
+    '''
+    Change the AI_MODE to either
+    0 => AI is turned off
+    1 => AI will use MiniMax algorithm
+    2 => AI will use Monte Carlo approach
+    , hide the "current player message"
+    (because it's obvious that it's almost always the player's turn)
+    and reset the statistics if he changes the mode
+    
+    Arguments:
+        mode {int} -- The new mode: 
+        0 => AI is turned off
+        1 => AI will use MiniMax algorithm
+        2 => AI will use Monte Carlo approach
+    '''
     global AI_MODE, running, wins, played, draws, board
+    # if there's a match running which has already been started,
+    # break the method and play an error sound
     if running and not isEmptyBoard(board):
         global errorSound
         errorSound.rewind()
         errorSound.play()
         return
+
+    # Break if the new mode is the same as the old one
     if mode is AI_MODE: return
+
     if not mode is 0:
-        global spielerAnzeige
+        global spielerAnzeige   # reset the current player message
         spielerAnzeige = ""
     else:
-        showCurrentPlayerMessage()
+        showCurrentPlayerMessage()  # or show it, if the AI is turned off
     
     # reset stats
     wins = [0, 0]
@@ -1069,6 +1253,11 @@ def computerOff():
     setComputer(0)
     
 def toggleBackground():
+    '''
+    Set the global background flag to its opposite value.
+    The variable will later on be used in #draw(canvas)
+    to either draw the rainbow background or not
+    '''
     global background
     background = not background
             
@@ -1100,7 +1289,7 @@ frame.set_mouseclick_handler( mouseHandler )
 # Starte GUI und Tests
 ####################################################
 
-#testFunction()
+# testFunction()
 
 # Start the frame animation
 frame.start()
