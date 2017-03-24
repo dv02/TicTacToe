@@ -638,13 +638,15 @@ def drawO( canvas, row, col ):
     canvas.draw_circle((x, y), radiuses[row][col], 5, radiusColors[row][col], colors[row][col])
     
 def drawBackground(canvas):
-    '''[summary]
-    
+    '''
     Draw the rainbow background on the given canvas
     
     Arguments:
         canvas {canvas} -- The canvas to draw on
     '''
+
+    global TICKS
+    
     t = TICKS % 360
     # convert the ticks to a number
     # from 0 to 359 that we can use for the css "hsl" function.
@@ -832,8 +834,7 @@ def get_empty_fields(board):
     return fields
 
 def random_move(board, player):
-    '''[summary]
-    
+    '''
     Fills up the board with random moves as long as there
     is no winner. Useful for the MonteCarlo AI.
     
