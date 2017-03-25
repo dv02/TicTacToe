@@ -1299,7 +1299,7 @@ def addVolume(summand):
 def mouseHandler( pos ):
     '''
     ' Handles the user's mouse click, only if the game is running
-    ' :param: pos - Tupel mit Koordinaten des Mausclicks 
+    ' :param: pos - Tupel mit Koordinaten des Mausklicks 
     '               pos[0] - x-Koordinate
     '               pos[1] - y-Koordinate
     '''
