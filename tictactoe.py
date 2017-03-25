@@ -31,6 +31,12 @@ FIRSTCOLOR = 'Red'
 SECONDCOLOR = 'Blue'
 BIG_MESSAGE_COLOR = 'Green'
 
+# speaker draw variables
+SPEAKER_OFFSET_X = 60
+SPEAKER_OFFSET_Y = 100
+SPEAKER_DISTANCE_Y = 200
+SPEAKER_SIZE= 40
+
 
 
 # list of 3 lists, which contain the colors for each field
@@ -87,14 +93,20 @@ wins = [0, 0]
 draws = 0
 played = 0
 
+PREFIX = "http://5.189.177.192/info/"
+
 # sounds
 VOLUME = 0.7
-errorSound = simplegui.load_sound('http://5.189.177.192/info/error.mp3')
+errorSound = simplegui.load_sound(PREFIX+'error.mp3')
 errorSound.set_volume(VOLUME)
-plopSound = simplegui.load_sound('http://5.189.177.192/info/plop.mp3')
+plopSound = simplegui.load_sound(PREFIX+'plop.mp3')
 plopSound.set_volume(VOLUME)
-backGroundMusic  = simplegui.load_sound('http://5.189.177.192/info/background.mp3')
+backGroundMusic  = simplegui.load_sound(PREFIX+'background.mp3')
 backGroundMusic.set_volume(VOLUME)
+
+# images
+speakerQuiet = simplegui.load_image(PREFIX+'speaker_quiet.png')
+speakerLoud = simplegui.load_image(PREFIX+'speaker_loud.png')
 
 # boolean flag for whether the animating
 # rainbow background should be toggled on or not.
@@ -112,6 +124,28 @@ def playMusic():
     global backGroundMusic
     backGroundMusic.rewind()
     backGroundMusic.play()
+
+def maxOfTwo(a,b):
+    '''
+    Get the bigger value of the two variables
+    
+    Arguments:
+        a {int,float,double} -- The first value
+        b {int,float,double} -- The second value
+    '''
+    if a > b: return a
+    else: return b
+
+def minOfTwo(a,b):
+    '''
+    Get the lower value of the two variables
+    
+    Arguments:
+        a {int,float,double} -- The first value
+        b {int,float,double} -- The second value
+    '''
+    if a < b: return a
+    else: return b
 
 '''
 ' Helper class for a Timer object which can run a given function
@@ -175,14 +209,16 @@ class Delay():
     delay = 1
     
     def doTick(self):
-        if self.ticks == 1:
+        if self.ticks == 1:     # break if the timer already ticked once
             self.timer.stop()
             return
+
+        # call the passed function with the given argument
         if self.arg == None:
             self.action()
         else:
             self.action(self.arg)
-        self.ticks += 1
+        self.ticks += 1     # increment the ticks so that it'll break in the next execution
     
     def start(self):
         self.timer.start()
@@ -201,12 +237,38 @@ class Delay():
         self.timer = simplegui.create_timer(delay, self.doTick)
         
 def copy_list(liste):
+    '''
+    Create a copy of the list.
+    Attention: If the list's values are lists themselves,
+    it will return a list containing the exact same content,
+    so that no new object gets created,
+    but existing object references get put into the list.
+    
+    Arguments:
+        liste {list} -- The list which should be copied
+    
+    Returns:
+        list -- A new list containg all the values of the "liste"
+    '''
     newList = []
     for val in liste:
         newList.append(val)
     return newList
 
 def copy_board(board):
+    '''
+    Create a new version of this board but maintaining
+    the old values. Hence, the resulting board will
+    look exactly the same as the original, but it's
+    a new list with a new reference to the list.
+    Calls #copy_list(liste)
+    
+    Arguments:
+        board {list} -- The original board (2d list)
+    
+    Returns:
+        list -- The copy of the original board (2d list)
+    '''
     newBoard = []
     for row in board:
         newBoard.append( copy_list(row) )
@@ -246,9 +308,8 @@ def isEmptyBoard(board):
 
 def testFunction():
     '''
-    ' Hier koennen/sollen alle eure Funktionen getestet
-    ' werden. Testet regelmaessig, damit sich keine
-    ' Fehler ansammeln.
+    Short testing function for all the different
+    methods regarding the main game logic
     '''
     testBoard = [[ 0, 1, 0],
                  [-1, 0,-1],
@@ -261,7 +322,7 @@ def testFunction():
     testBoard = makeMove( testBoard, 0, 2)
     printBoard( testBoard )
     
-    # Index out of bounds!
+    # This will throw an index out of bounds!
     #print "\n Teste makeMove auf (0,3)"
     #testBoard = makeMove( testBoard, 0, 3)
     #printBoard( testBoard )
@@ -386,13 +447,15 @@ def testFunction():
 
 def printBoard( board ):
     '''
-    ' Bekommt ein Board und gibt es auf der Konsole aus.
-    ' Schaut euch die zwei Schleifen an und versteht, was
-    ' sie tun!
-    ' Die Indexe idx und jdx geben an, in welchem Feld wir
-    ' gerade sind. Sie werden benoetigt, da wir nur die
-    ' inneren Feldgrenzen zeichnen wollen.
-    ' :param: board - 3x3-Spielfeld
+    Prints out the board in the following format:
+         X | . | O 
+        ---|---|---
+         . | X | . 
+        ---|---|---
+         X | O | O 
+    
+    Arguments:
+        board {list} -- The board (2d list)
     '''
     print
     idx = 0
@@ -401,7 +464,7 @@ def printBoard( board ):
         string = ''
         for field in line:
             if field == 0:
-                string += '   '
+                string += ' . '
             elif field == -1:
                 string += ' O '
             elif field == 1:
@@ -441,13 +504,16 @@ def convertMove( string ):
 # Spiellogik
 ####################################################
 def makeMove( board, row, col):
-    '''
-    ' makeMove veraendert das board.
-    ' :global: player
-    ' :param: board - das aktuelle Spielbrett
-    ' :param: row -> Zeilennummer
-    ' :param: col -> Spaltennummer.
-    ' :return: board
+    '''x
+    Sets the field at the given location to the current player
+    
+    Arguments:
+        board {list} -- The board (2d list)
+        row {int} -- The row of the field
+        col {int} -- The column of the field
+    
+    Returns:
+        list -- The new, modified board if everything was fine, or None, if the selected field is already taken
     '''
     global player
     # testet, ob die Zeile und Spalte im erlaubten Bereich sind
@@ -588,10 +654,10 @@ def drawField( canvas ):
     p4 = (2 * fieldSize + LINEWIDTH / 2)
     
     # borders
-    canvas.draw_line((p1+ OFFSETX, p1+ OFFSETY), (p1+ OFFSETX, p2+ OFFSETY), LINEWIDTH, color)
-    canvas.draw_line((p1+ OFFSETX, p2+ OFFSETY), (p2+ OFFSETX, p2+ OFFSETY), LINEWIDTH, color)
-    canvas.draw_line((p2+ OFFSETX, p1+ OFFSETY), (p2+ OFFSETX, p2+ OFFSETY), LINEWIDTH, color)
-    canvas.draw_line((p1+ OFFSETX, p1+ OFFSETY), (p2+ OFFSETX, p1+ OFFSETY), LINEWIDTH, color)
+    canvas.draw_line((p1 + OFFSETX, p1 + OFFSETY), (p1 + OFFSETX, p2 + OFFSETY), LINEWIDTH, color)
+    canvas.draw_line((p1 + OFFSETX, p2 + OFFSETY), (p2 + OFFSETX, p2 + OFFSETY), LINEWIDTH, color)
+    canvas.draw_line((p2 + OFFSETX, p1 + OFFSETY), (p2 + OFFSETX, p2 + OFFSETY), LINEWIDTH, color)
+    canvas.draw_line((p1 + OFFSETX, p1 + OFFSETY), (p2 + OFFSETX, p1 + OFFSETY), LINEWIDTH, color)
     
     # vertikale Linien
     canvas.draw_line((p3 + OFFSETX, p1 + OFFSETY), (p3 + OFFSETX, p2 + OFFSETY), LINEWIDTH, color)
@@ -646,7 +712,7 @@ def drawBackground(canvas):
     '''
 
     global TICKS
-    
+
     t = TICKS % 360
     # convert the ticks to a number
     # from 0 to 359 that we can use for the css "hsl" function.
@@ -661,6 +727,48 @@ def drawBackground(canvas):
         hsl)
     TICKS+= 2
 
+def drawSpeakerSymbols(canvas):
+    global SPEAKER_OFFSET_X, SPEAKER_OFFSET_Y, SPEAKER_DISTANCE_Y
+    global WINDOWY, WINDOWX, SPEAKER_SIZE, speakerQuiet, speakerLoud
+    global VOLUME
+
+    width = speakerLoud.get_width()
+    height = speakerLoud.get_height()
+
+    # break if the image isn't loaded yet
+    if width == 0:
+        return
+    center_dest_x = WINDOWX - SPEAKER_OFFSET_X
+    center_dest_y = SPEAKER_OFFSET_Y
+
+    p1 = center_dest_x - 10
+    p2 = center_dest_x
+    p3 = center_dest_y + SPEAKER_DISTANCE_Y - 25
+    p4 = center_dest_y + 25
+
+
+    canvas.draw_polygon(
+        [(p1, p3), (p2, p3), (p2, p4), (p1,p4) ],
+        10,
+        "#CCE3EB")
+
+    if VOLUME > 0:
+        p5 = p4 + int(((1.0-VOLUME) * float(SPEAKER_DISTANCE_Y-25-SPEAKER_SIZE)))
+        canvas.draw_polygon(
+            [(p1, p3), (p2, p3), (p2, p5), (p1,p5) ],
+            4,
+            "blue")
+
+
+    canvas.draw_image(speakerLoud,(width/2,height/2),(width, height),(center_dest_x, center_dest_y),(SPEAKER_SIZE,SPEAKER_SIZE))
+
+    canvas.draw_image(
+        speakerQuiet,
+        (width/2,height/2),
+        (width, height),
+        (center_dest_x, center_dest_y + SPEAKER_DISTANCE_Y),
+        (SPEAKER_SIZE,SPEAKER_SIZE))
+
 def draw( canvas ):
     '''
     ' Zeichnet Feld und Spielzuege und alle Anzeigen
@@ -671,6 +779,8 @@ def draw( canvas ):
     # draw the rainbow background if the global flag is set
     if background:
         drawBackground(canvas)
+
+    drawSpeakerSymbols( canvas )
     
     # zeichne Spielfeld
     drawField( canvas )
@@ -776,7 +886,6 @@ def blink(val, color):
                 if blinked == 8:
                     colors[row][col] = color
                     blinkTimer.stop()
-                    return
     
 def blinkBlue():
     '''
@@ -1170,6 +1279,23 @@ def toggleAutoRestart():
     global AUTO_RESTART
     AUTO_RESTART = not AUTO_RESTART
 
+def addVolume(summand):
+    '''
+    Increment the volume by the given amount.
+    Note: The volume won't be less than 0 or greater than 1.
+    This will also change the volume of all sounds.
+    
+    Arguments:
+        summand {float} -- The summand which will be added to the current volume. Can be negative
+    '''
+    global VOLUME, errorSound, plopSound, backGroundMusic
+
+    VOLUME = maxOfTwo( 0, minOfTwo( 1, VOLUME + summand ) )
+
+    errorSound.set_volume(VOLUME)
+    plopSound.set_volume(VOLUME)
+    backGroundMusic.set_volume(VOLUME)
+
 def mouseHandler( pos ):
     '''
     ' Handles the user's mouse click, only if the game is running
@@ -1180,7 +1306,32 @@ def mouseHandler( pos ):
 
     global WINDOWX, WINDOWY, GAMESIZE, OFFSETX, OFFSETY
     global LINEWIDTH, board, running, AI_MODE, player
-    
+    global SPEAKER_OFFSET_X, SPEAKER_OFFSET_Y
+    global SPEAKER_SIZE, SPEAKER_DISTANCE_Y, speakerLoud
+
+    center_dest_x = WINDOWX - SPEAKER_OFFSET_X  # get the center of the image
+    center_dest_y = SPEAKER_OFFSET_Y
+
+    x = pos[0]
+    y = pos[1]
+
+    # declare 4 variables for the upper and lower y coordinate and the left and right x bounds
+    left  = ( center_dest_x - ( SPEAKER_SIZE / 2 ) )
+    right = ( center_dest_x + ( SPEAKER_SIZE / 2 ) )
+    upper = ( center_dest_y - ( SPEAKER_SIZE / 2 ) )
+    lower = ( center_dest_y + ( SPEAKER_SIZE / 2 ) )
+
+    # if the x coordinate could be on a speaker symbol
+    if x >= left and x <= right:
+        # check if it's the upper speaker symbol
+        if y >= upper and y <= lower:
+            addVolume(0.1)
+            return
+        # check if it's the lower speaker symbol
+        elif y >= upper+SPEAKER_DISTANCE_Y and y <= lower+SPEAKER_DISTANCE_Y:
+            addVolume(-0.1)
+            return
+
     # only continue if the game is running
     if not running:
         return
@@ -1190,8 +1341,8 @@ def mouseHandler( pos ):
         return
     
     # subtract the offests so that we end up with x and y between 0 and WINDOWX / WINDOWY
-    x = pos[0] - OFFSETX
-    y = pos[1] - OFFSETY
+    x -= OFFSETX
+    y -= OFFSETY
     
     # Check if the clicked position is inside the actual game
     if x < 0 or y < 0 or x > GAMESIZE or y > GAMESIZE:
