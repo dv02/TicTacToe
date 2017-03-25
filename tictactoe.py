@@ -1,4 +1,4 @@
-# Template für Tic-Tac-Toe
+# Tic Tac Toe game by Jan Wilhelm
 # Das 3x3-Spielfeld wird als 2 dimensionale Liste
 # repraesentiert, wobei gilt:
 #       0 -> leeres Feld
@@ -20,22 +20,22 @@ import codeskulptor
 codeskulptor.set_timeout(100)
 
 # draw Variablen
-WINDOWX = 1000
-WINDOWY = 700
-GAMESIZE = 500
-LINEWIDTH = 6
-OFFSETX = 300
-OFFSETY = 100
-TICKS = 0
-FIRSTCOLOR = 'Red'
-SECONDCOLOR = 'Blue'
-BIG_MESSAGE_COLOR = 'Green'
+WINDOWX = 1000                  # the width of the frame
+WINDOWY = 700                   # the height of the frame
+GAMESIZE = 500                  # the size of the actual game (remember it's a square)
+LINEWIDTH = 6                   # the width of the radius of the fields and the width of the seperating lines
+OFFSETX = 300                   # the field's offset off the left side
+OFFSETY = 100                   # the field's offset off the upper side
+TICKS = 0                       # the ticks passed since the game was started
+FIRSTCOLOR = 'Red'              # the color for the first player
+SECONDCOLOR = 'Blue'            # the color for the second player
+BIG_MESSAGE_COLOR = 'Green'     # the color of the message saying which player has won
 
 # speaker draw variables
-SPEAKER_OFFSET_X = 60
-SPEAKER_OFFSET_Y = 100
-SPEAKER_DISTANCE_Y = 200
-SPEAKER_SIZE= 40
+SPEAKER_OFFSET_X = 60           # the speaker icon's offset off the x axis
+SPEAKER_OFFSET_Y = 100          # the speaker icon's offset off the y axis
+SPEAKER_DISTANCE_Y = 200        # the distance in pixels between the two speaker icons
+SPEAKER_SIZE= 40                # the siz eof each speaker icon
 
 
 
@@ -45,16 +45,16 @@ colors = [
     for x in range(3)]
 
 # list of 3 lists, which contain the colors for
-# the radius ufeach field
+# the radius of each field
 radiusColors = [
     ["Black" for x in range(3)]
     for x in range(3)]
 
 
-
 radiuses = [[1,1,1],   # alles 1
          [1,1,1],
          [1,1,1]]
+
 spielerAnzeige = '' # zeigt an, wer am Zug ist
 bigMessage = ''
 
@@ -923,7 +923,7 @@ def fadeOutField(row, col, ticks):
     radiusColors[row][col] = color
     
 ####################################################
-# Augmented Intelligence
+# Artificial Intelligence
 ####################################################
 def get_empty_fields(board):
     '''
