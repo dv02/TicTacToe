@@ -667,7 +667,7 @@ def drawField( canvas ):
     canvas.draw_line((p1 + OFFSETX, p3 + OFFSETY), (p2 + OFFSETX, p3 + OFFSETY), LINEWIDTH, color)
     canvas.draw_line((p1 + OFFSETX, p4 + OFFSETY), (p2 + OFFSETX, p4 + OFFSETY), LINEWIDTH, color)
 
-def drawX( canvas, row, col ):
+def drawFieldAt(canvas, row, col):
     '''
     ' Draw an item at the given position in the board on the screen
     ' :param: canvas The canvas to draw on
@@ -685,23 +685,12 @@ def drawX( canvas, row, col ):
     y = (row * fieldSize + fieldSize / 2) + OFFSETY
     canvas.draw_circle((x, y), radiuses[row][col], 5, radiusColors[row][col], colors[row][col])
 
+
+def drawX( canvas, row, col ):
+    drawFieldAt(canvas, row, col)
+
 def drawO( canvas, row, col ):
-    '''
-    ' Draw an item at the given position in the board on the screen
-    ' :param: canvas The canvas to draw on
-    ' :param: row The row (number from 0 to 2, inclusive) of the item
-    ' :param: col The column (number from 0 to 2, inclusive) of the item
-    '''
-    global GAMESIZE, LINEWIDTH, OFFSETX, OFFSETY
-    global colors, radiuses, radiusColors
-    
-    # Konstanten zum Zeichnen
-    fieldSize = GAMESIZE / 3
-    
-    # Mitte des aktuellen Felds
-    x = (col * fieldSize + fieldSize / 2) + OFFSETX
-    y = (row * fieldSize + fieldSize / 2) + OFFSETY
-    canvas.draw_circle((x, y), radiuses[row][col], 5, radiusColors[row][col], colors[row][col])
+    drawFieldAt(canvas, row, col)
     
 def drawBackground(canvas):
     '''
