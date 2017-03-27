@@ -106,13 +106,14 @@ def get_empty_fields(board):
 def random_move(board, player):
     result = 0
     while result == 0:
+        
+        player*=-1
         emptyFields = get_empty_fields(board)
         if emptyFields == []:
             return 0
 
         move = random.choice(emptyFields)
         board[move[0]][move[1]] = player
-        player*=-1
 
         result = getWinner(board)
     return result

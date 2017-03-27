@@ -945,14 +945,14 @@ def random_move(board, player):
     '''
     result = 0
     while result == 0:
+        player*=-1      # change the player, so that is opponent will make a random move in the next loop
+        
         emptyFields = get_empty_fields(board)
         if emptyFields == []:   # if there is no empty field, it's a draw, so we return 0 here.
             return 0
 
         move = random.choice(emptyFields)      # make a move at one random of these fields.
         board[move[0]][move[1]] = player
-        player*=-1      # change the player, so that is opponent will make a random move in the next loop
-
         result = getWinner(board)
     return result
 
